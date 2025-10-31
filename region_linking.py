@@ -54,14 +54,17 @@ def calculate_angle(point1, point2, center):
     angle = math.degrees(math.atan2(y2, x2) - math.atan2(y1, x1))
     return angle if angle >= 0 else angle + 360
 
-def process_arrow_vertex(regions, angles):
-    """Process Arrow vertex to find smallest angle regions"""
+def process_arrow_vertex(regions: List[int], angles: List[float]) -> Tuple[int, int]:
+    """Process Arrow vertex to find smallest angle regions."""
     if len(regions) < 3:
         return None
         
-    # Find two regions with smallest angle
-    sorted_angles = sorted(enumerate(angles), key=lambda x: x[1])
-    r1, r2 = regions[sorted_angles[0][0]], regions[sorted_angles[1][0]]
+    # Sort regions by their angles
+    region_angles = list(zip(regions, angles))
+    sorted_regions = sorted(region_angles, key=lambda x: x[1])
+    
+    # Return the two regions with smallest angle between them
+    r1, r2 = sorted_regions[0][0], sorted_regions[1][0]
     return (r1, r2)
 
 def log_vertex_processing(vertex_id, vtype, links_made):
@@ -99,12 +102,33 @@ def link_regions(vertex_types: Dict[str, str],
         List of tuples (region1, region2, vertex) representing linked regions
     """
     links = []
+    unique_region_pairs = set()  # For tracking unique region pairs
     
     # Validate vertex types
     valid_types = {"L", "Fork", "Arrow", "T"}
     invalid_types = set(vertex_types.values()) - valid_types
     if invalid_types:
         raise ValueError(f"Invalid vertex types found: {invalid_types}")
+
+    # Get background region and vertex coordinates from input file
+    try:
+        with open(input_file) as f:
+            data = json.load(f)
+            background = data.get("background", None)
+            # Extract vertex coordinates from input file
+            vertex_coords = {v["id"]: v["coords"] for v in data["vertex-data"]}
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+        print(f"Warning: Error loading data from {input_file}: {e}")
+        return []
+
+    def add_link(links, r1, r2, via):
+        """Record a bidirectional region link, avoiding background"""
+        if r1 == background or r2 == background:
+            return False  # Return False if link wasn't added
+        if (r1, r2) not in links and (r2, r1) not in links:
+            links.append((r1, r2, via))
+            return True  # Return True if link was added
+        return False
 
     for vertex, vtype in vertex_types.items():
         regions = vertex_regions.get(vertex, [])
@@ -128,15 +152,13 @@ def link_regions(vertex_types: Dict[str, str],
                 links_made.append((r1, r2))
 
         elif vtype == "Arrow":
-            # Find the two regions with smallest angle
-            # For now using first two regions, but could be improved with angle calculations
             if len(regions) >= 3:
-                # Link first two regions as they form the arrow point
-                add_link(links, regions[0], regions[1], vertex)
-                links_made.append((regions[0], regions[1]))
-                # Optionally link arrow point to shaft region
-                add_link(links, regions[1], regions[2], vertex)
-                links_made.append((regions[1], regions[2]))
+                # Use evenly spaced angles for simplicity
+                angles = [i * 120 for i in range(len(regions))]
+                
+                r1, r2 = process_arrow_vertex(regions, angles)
+                if add_link(links, r1, r2, vertex):
+                    links_made.append((r1, r2))
 
         elif vtype == "T":
             # Occlusion — typically no region linking
@@ -150,16 +172,43 @@ def visualize_links(links: List[Tuple[int, int, str]]) -> None:
     """Create a simple ASCII visualization of region links."""
     from collections import defaultdict
     
-    # Group links by vertex
-    vertex_links = defaultdict(list)
+    # Group links by vertex and track unique region pairs
+    vertex_links = defaultdict(set)  # Changed to set for unique pairs
     for r1, r2, v in links:
-        vertex_links[v].append((r1, r2))
+        # Store region pairs in sorted order for consistency
+        vertex_links[v].add(tuple(sorted([r1, r2])))
     
     print("\nRegion Link Visualization:")
-    for vertex, region_pairs in vertex_links.items():
+    for vertex, region_pairs in sorted(vertex_links.items()):
         print(f"\nVertex {vertex}:")
-        for r1, r2 in region_pairs:
+        for r1, r2 in sorted(region_pairs):  # Sort for consistent output
             print(f"  {r1} <---> {r2}")
+
+def visualize_region_graph(links: List[Tuple[int, int, str]]) -> None:
+    """Create a visual graph of region links using networkx."""
+    try:
+        import networkx as nx
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("Warning: networkx or matplotlib not installed. Skipping graph visualization.")
+        return
+        
+    G = nx.Graph()
+    for r1, r2, via in links:
+        G.add_edge(r1, r2, label=via)
+    
+    # Create the visualization
+    plt.figure(figsize=(8, 8))
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_color='lightblue', 
+            font_weight='bold', node_size=1000)
+    
+    # Add edge labels
+    edge_labels = nx.get_edge_attributes(G, 'label')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+    
+    plt.title("Region Link Graph")
+    plt.show()
 
 def test_link_regions():
     """Test the region linking functionality."""
@@ -193,9 +242,6 @@ def get_vertex_regions(filename: str) -> Dict[str, List[int]]:
         return vertex_regions  # Fall back to test data
 
 if __name__ == "__main__":
-    # Run tests
-    test_link_regions()
-    
     # Load data from files
     input_file = "cube.json"  # or "one.json"
     vertex_classifications = load_vertex_analysis("vertex_analysis_output.json")
@@ -204,3 +250,4 @@ if __name__ == "__main__":
     # Run region linking
     linked_regions = link_regions(vertex_classifications, regions)
     visualize_links(linked_regions)
+    visualize_region_graph(linked_regions)  # Optional graph visualization
