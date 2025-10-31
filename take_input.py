@@ -1,4 +1,6 @@
 import json
+import math
+
 
 def get_data(filename:str="cube.json"):
     # Load and parse the JSON file Load and para the JSON file 
