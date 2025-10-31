@@ -250,4 +250,4 @@ if __name__ == "__main__":
     # Run region linking
     linked_regions = link_regions(vertex_classifications, regions)
     visualize_links(linked_regions)
-    visualize_region_graph(linked_regions)  # Optional graph visualization
+    visualize_region_graph(linked_regions)  # Optional graph visualization... it makes a triangle rn which stresses me out 😭😭✨
