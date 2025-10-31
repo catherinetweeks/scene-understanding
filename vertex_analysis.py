@@ -1,6 +1,7 @@
 import math
 import json
 from take_input import get_data
+from typing import Dict
 
 
 # Helper function - get list of neighbors for each vertex, and remove duplicates by making into a set
@@ -53,10 +54,22 @@ def analyze_vertices(input:str):
 
     return classifications
 
+def write_analysis(classifications: Dict[str, str], output_file: str = "vertex_analysis_output.json") -> None:
+    """Write vertex classifications to JSON file"""
+    with open(output_file, 'w') as f:
+        json.dump(classifications, f, indent=2)
 
 def main():
-    print(analyze_vertices("cube.json"))
-    print(analyze_vertices('one.json'))
+    # Analyze vertices
+    cube_results = analyze_vertices("cube.json")
+    one_results = analyze_vertices('one.json')
+    
+    # Write results to file
+    write_analysis(cube_results)
+    
+    # Print results
+    print(cube_results)
+    print(one_results)
 
 if __name__ == '__main__':
     main()
