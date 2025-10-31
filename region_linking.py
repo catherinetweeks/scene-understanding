@@ -36,13 +36,9 @@ def load_vertex_analysis(filename: str = "vertex_analysis_output.json") -> Dict[
         ...
     }
     """
-    try:
-        filepath = Path(__file__).parent / filename
-        with open(filepath) as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print(f"Warning: Could not find {filename}, using test data instead")
-        return vertex_types  # Fall back to test data
+    filepath = Path(__file__).parent / filename
+    with open(filepath) as f:
+        return json.load(f)
 
 def calculate_angle(point1, point2, center):
     """Calculate angle between two points around a center point"""
