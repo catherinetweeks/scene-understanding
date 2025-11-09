@@ -104,15 +104,3 @@ BODY 2: regions [3, 4, 5]
 The system includes two visualization methods:
 1. ASCII visualization of region links
 2. Network graph visualization using networkx (optional)
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/NewFeature`)
-3. Commit your changes (`git commit -am 'Add NewFeature'`)
-4. Push to the branch (`git push origin feature/NewFeature`)
-5. Create a new Pull Request
-
-## License
-
-This project is available under the MIT License.
