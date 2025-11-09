@@ -27,7 +27,7 @@ def add_link(links, r1, r2, via):
 
 def load_vertex_analysis(filename: str = "vertex_analysis_output.json") -> Dict[str, str]:
     """
-    Load vertex analysis results from step 2
+    Load vertex analysis results from a JSON file.
     Expected format from vertex_analysis.py:
     {
         "A": "L",
@@ -86,32 +86,26 @@ def validate_vertex_data(vertex_types, vertex_regions):
 # --- Main linking function ---
 
 def link_regions(vertex_types: Dict[str, str], 
-                vertex_regions: Dict[str, List[int]]) -> List[Tuple[int, int, str]]:
+                vertex_regions: Dict[str, List[int]], 
+                input_file: str = "cube.json") -> List[Tuple[int, int, str]]:
     """
     Link regions based on vertex types and their connecting regions.
     
     Args:
-        vertex_types: Dictionary mapping vertex IDs to their types (L, Fork, Arrow, T)
-        vertex_regions: Dictionary mapping vertex IDs to lists of connected region IDs
+        vertex_types: Dictionary mapping vertex IDs to their types
+        vertex_regions: Dictionary mapping vertex IDs to lists of regions
+        input_file: Path to input JSON file (for background region)
     
     Returns:
         List of tuples (region1, region2, vertex) representing linked regions
     """
     links = []
-    unique_region_pairs = set()  # For tracking unique region pairs
     
-    # Validate vertex types
-    valid_types = {"L", "Fork", "Arrow", "T"}
-    invalid_types = set(vertex_types.values()) - valid_types
-    if invalid_types:
-        raise ValueError(f"Invalid vertex types found: {invalid_types}")
-
-    # Get background region and vertex coordinates from input file
+    # Get background region and vertex coordinates
     try:
         with open(input_file) as f:
             data = json.load(f)
             background = data.get("background", None)
-            # Extract vertex coordinates from input file
             vertex_coords = {v["id"]: v["coords"] for v in data["vertex-data"]}
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         print(f"Warning: Error loading data from {input_file}: {e}")
